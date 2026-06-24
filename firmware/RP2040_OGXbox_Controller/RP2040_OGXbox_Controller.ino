@@ -14,10 +14,22 @@
 #define OGXB_ENABLE_IDLE_SCRIPT 1
 #endif
 
+#ifndef OGXB_COMMAND_USE_USB_SERIAL
+#define OGXB_COMMAND_USE_USB_SERIAL 0
+#endif
+
+#if OGXB_COMMAND_USE_USB_SERIAL
+#define COMMAND_STREAM Serial
+#else
+#define COMMAND_STREAM Serial1
+#endif
+
 class XidGamepadUsb : public Adafruit_USBD_Interface {
 public:
   bool begin() {
+#if !OGXB_COMMAND_USE_USB_SERIAL
     SerialTinyUSB.end();
+#endif
 
     if (!TinyUSBDevice.addInterface(*this)) {
       return false;
@@ -85,8 +97,8 @@ static void scripted_input(uint32_t now_ms) {
 }
 
 static void command_reply(const char *text) {
-  Serial1.print(text);
-  Serial1.print("\r\n");
+  COMMAND_STREAM.print(text);
+  COMMAND_STREAM.print("\r\n");
 }
 
 static int parse_int_token(const char *token, int fallback) {
@@ -213,19 +225,19 @@ static void process_command(char *line) {
   }
 
   if (!strcmp(cmd, "STATUS")) {
-    Serial1.print("OK STATUS script=");
-    Serial1.print(script_enabled ? "on" : "off");
-    Serial1.print(" buttons=");
-    Serial1.print(report.digital_buttons, HEX);
-    Serial1.print(" A=");
-    Serial1.print(report.a);
-    Serial1.print(" B=");
-    Serial1.print(report.b);
-    Serial1.print(" LX=");
-    Serial1.print(report.left_stick_x);
-    Serial1.print(" LY=");
-    Serial1.print(report.left_stick_y);
-    Serial1.print("\r\n");
+    COMMAND_STREAM.print("OK STATUS script=");
+    COMMAND_STREAM.print(script_enabled ? "on" : "off");
+    COMMAND_STREAM.print(" buttons=");
+    COMMAND_STREAM.print(report.digital_buttons, HEX);
+    COMMAND_STREAM.print(" A=");
+    COMMAND_STREAM.print(report.a);
+    COMMAND_STREAM.print(" B=");
+    COMMAND_STREAM.print(report.b);
+    COMMAND_STREAM.print(" LX=");
+    COMMAND_STREAM.print(report.left_stick_x);
+    COMMAND_STREAM.print(" LY=");
+    COMMAND_STREAM.print(report.left_stick_y);
+    COMMAND_STREAM.print("\r\n");
     return;
   }
 
@@ -341,8 +353,8 @@ static void process_command(char *line) {
 }
 
 static void poll_command_uart() {
-  while (Serial1.available() > 0) {
-    char c = (char)Serial1.read();
+  while (COMMAND_STREAM.available() > 0) {
+    char c = (char)COMMAND_STREAM.read();
 
     if (c == '\r' || c == '\n') {
       if (command_line_len > 0) {
@@ -374,9 +386,13 @@ void setup() {
   xid_gamepad_send(&report);
   memset(&rumble, 0, sizeof(rumble));
 
+#if OGXB_COMMAND_USE_USB_SERIAL
+  Serial.begin(COMMAND_UART_BAUD);
+#else
   Serial1.setRX(COMMAND_UART_RX_PIN);
   Serial1.setTX(COMMAND_UART_TX_PIN);
   Serial1.begin(COMMAND_UART_BAUD);
+#endif
   command_reply("OK OGXB READY");
 
   xid_usb.begin();

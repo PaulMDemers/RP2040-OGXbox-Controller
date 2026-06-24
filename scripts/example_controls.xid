@@ -1,0 +1,10 @@
+# Example xidctl script for the serial control layer.
+STATUS
+TAP UP 120
+WAIT 180
+TAP DOWN 120
+WAIT 180
+AXIS LX -22000
+WAIT 250
+AXIS LX 0
+CLEAR

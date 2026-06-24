@@ -1,6 +1,6 @@
 # RP2040 OG Xbox Controller
 
-Arduino firmware for using a Waveshare RP2040-Zero as an original Xbox XID gamepad, plus a second-RP2040 UART bridge for sending live control commands while the controller board's native USB port is connected to the Xbox.
+Arduino firmware for using a Waveshare RP2040-Zero as an original Xbox XID gamepad, plus a second-RP2040 UART bridge for sending live control commands while the controller board's native USB port is connected to the Xbox. The repo also includes an experimental one-chip Pico SDK firmware that moves the Xbox-facing USB connection to GPIO with Pico-PIO-USB.
 
 This is an early but working native-USB build. The Xbox-facing RP2040 enumerates as a Duke-style controller (`045E:0202`) and answers the Xbox-specific XID descriptor probes used during controller startup.
 
@@ -8,6 +8,7 @@ This is an early but working native-USB build. The Xbox-facing RP2040 enumerates
 
 - `firmware/RP2040_OGXbox_Controller`: Xbox-facing controller firmware.
 - `firmware/RP2040_UART_Bridge`: USB-serial to UART bridge firmware for a second RP2040 board.
+- `firmware/RP2040_OGXbox_Controller_GPIO_PIO`: experimental one-chip GPIO USB firmware.
 - `tools/xidctl.ps1`: Windows PowerShell helper for sending controller commands through the bridge.
 - `diagnostics/xid_usb_diag`: optional NXDK homebrew diagnostic XBE source with UDP broadcast logging.
 - `docs/wiring.md`: wiring notes for the Xbox cable and bridge board.
@@ -22,7 +23,12 @@ Because that USB port is occupied by the Xbox, live command input uses a second 
 PC USB -> bridge RP2040 -> UART -> Xbox-facing RP2040 -> native USB -> Xbox
 ```
 
-A future revision should move the Xbox-facing USB connection to GPIO using PIO USB so the main RP2040 USB-C port can stay available for serial control.
+The experimental one-chip path moves the Xbox-facing USB connection to GPIO using PIO USB so the main RP2040 USB-C port can stay available for serial control:
+
+```text
+PC USB serial/control -> RP2040 native USB-C
+Xbox controller port -> RP2040 GPIO PIO USB
+```
 
 ## Build Requirements
 
@@ -31,6 +37,7 @@ A future revision should move the Xbox-facing USB connection to GPIO using PIO U
 - Adafruit TinyUSB support from that board package.
 - Waveshare RP2040-Zero or compatible RP2040 board.
 - Optional: nxdk for building the Xbox USB diagnostic.
+- Optional for the experimental GPIO firmware: CMake, make, and the Pico SDK included with Arduino-Pico.
 
 Install/update the RP2040 board package with:
 
@@ -85,6 +92,22 @@ Flash the generated UF2 from:
 firmware/RP2040_UART_Bridge/build/rp2040.rp2040.waveshare_rp2040_zero/RP2040_UART_Bridge.ino.uf2
 ```
 
+## Build the Experimental GPIO PIO Firmware
+
+The one-chip firmware is a Pico SDK project, not an Arduino sketch:
+
+```powershell
+.\scripts\build_gpio_pio.ps1
+```
+
+Flash the generated UF2 from:
+
+```text
+build/gpio_pio/rp2040_ogxbox_controller_gpio_pio.uf2
+```
+
+Default GPIO USB pins are `GP2` for Xbox D+ and `GP3` for Xbox D-. See `docs/gpio-pio-usb.md` before wiring, especially the pull-up resistor and 5V isolation notes.
+
 ## Wiring
 
 See `docs/wiring.md` for the full wiring notes. In short:
@@ -108,6 +131,8 @@ Bridge RP2040 to controller RP2040:
 | GP1 / UART RX | GP0 / UART TX |
 
 Verify D+ and D- before powering the cable. Some published color tables disagree.
+
+For the experimental one-chip GPIO path, see `docs/gpio-pio-usb.md`.
 
 ## Startup Behavior
 
@@ -136,6 +161,28 @@ Send specific commands:
 
 ```powershell
 .\tools\xidctl.ps1 -Port COM7 -Command "DOWN 150","UP 150","CLEAR"
+```
+
+Auto-detect the controller serial port and send a status request:
+
+```powershell
+.\tools\xidctl.ps1 -Auto -Status
+```
+
+Run a command script:
+
+```powershell
+.\tools\xidctl.ps1 -Auto -ScriptPath .\scripts\example_controls.xid
+```
+
+Use convenience flags:
+
+```powershell
+.\tools\xidctl.ps1 -Auto -Tap UP -TapMs 120
+.\tools\xidctl.ps1 -Auto -Hold DOWN
+.\tools\xidctl.ps1 -Auto -Release DOWN
+.\tools\xidctl.ps1 -Auto -Axis LX -AxisValue -22000
+.\tools\xidctl.ps1 -Auto -Clear
 ```
 
 Interactive mode:
