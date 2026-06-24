@@ -190,6 +190,12 @@ Listen for broadcasts on the PC:
 .\diagnostics\xid_usb_diag\udp_diag_listener.ps1
 ```
 
+Upload the built XBE to an Xbox over FTP:
+
+```powershell
+.\scripts\upload_xbe.ps1 -HostName 192.168.50.156 -User xbox -Password xbox -RemoteDir /E/Applications/xib_diag
+```
+
 This was useful for confirming that the controller enumerated as `045E:0202` and that the Xbox XID stack was binding to the expected interface.
 
 ## Notes
