@@ -10,6 +10,10 @@
 #define COMMAND_LINE_MAX 96
 #define DEFAULT_TAP_MS 120
 
+#ifndef OGXB_ENABLE_IDLE_SCRIPT
+#define OGXB_ENABLE_IDLE_SCRIPT 1
+#endif
+
 class XidGamepadUsb : public Adafruit_USBD_Interface {
 public:
   bool begin() {
@@ -51,7 +55,7 @@ public:
 static XidGamepadUsb xid_usb;
 static xid_gamepad_report_t report;
 static xid_gamepad_rumble_t rumble;
-static bool script_enabled = true;
+static bool script_enabled = OGXB_ENABLE_IDLE_SCRIPT != 0;
 static bool command_mode_seen = false;
 static uint32_t clear_report_at_ms = 0;
 static char command_line[COMMAND_LINE_MAX];
@@ -229,10 +233,16 @@ static void process_command(char *line) {
 
   if (!strcmp(cmd, "SCRIPT")) {
     if (arg1 && !strcmp(arg1, "ON")) {
+#if OGXB_ENABLE_IDLE_SCRIPT
       script_enabled = true;
       command_mode_seen = false;
       neutral_report();
       command_reply("OK SCRIPT ON");
+#else
+      script_enabled = false;
+      neutral_report();
+      command_reply("ERR SCRIPT DISABLED AT BUILD TIME");
+#endif
     } else {
       script_enabled = false;
       neutral_report();
@@ -385,7 +395,7 @@ void loop() {
   }
 
   if (now - last_report_ms >= 8) {
-    if (script_enabled && !command_mode_seen) {
+    if (OGXB_ENABLE_IDLE_SCRIPT && script_enabled && !command_mode_seen) {
       scripted_input(now);
     }
     xid_gamepad_send(&report);

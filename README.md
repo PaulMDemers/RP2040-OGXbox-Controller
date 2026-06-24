@@ -47,10 +47,22 @@ Build both Arduino sketches:
 .\scripts\build_arduino.ps1
 ```
 
+Build both sketches with the controller idle Down/Up startup loop disabled:
+
+```powershell
+.\scripts\build_arduino.ps1 -DisableIdleScript
+```
+
 Or build the controller firmware directly:
 
 ```powershell
-& 'C:\Program Files\Arduino CLI\arduino-cli.exe' compile --export-binaries --fqbn rp2040:rp2040:waveshare_rp2040_zero:usbstack=tinyusb --additional-urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json .\firmware\RP2040_OGXbox_Controller
+& 'C:\Program Files\Arduino CLI\arduino-cli.exe' compile --clean --export-binaries --fqbn rp2040:rp2040:waveshare_rp2040_zero:usbstack=tinyusb --additional-urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json .\firmware\RP2040_OGXbox_Controller
+```
+
+Direct controller build with the idle loop disabled:
+
+```powershell
+& 'C:\Program Files\Arduino CLI\arduino-cli.exe' compile --clean --export-binaries --fqbn rp2040:rp2040:waveshare_rp2040_zero:usbstack=tinyusb --build-property "compiler.cpp.extra_flags=-DOGXB_ENABLE_IDLE_SCRIPT=0" --additional-urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json .\firmware\RP2040_OGXbox_Controller
 ```
 
 Flash the generated UF2 from:
@@ -104,7 +116,7 @@ On boot, before any UART command is received, the controller sends a repeating t
 - Down
 - Up
 
-Any UART control command disables the startup script. Send `SCRIPT ON` to re-enable it.
+Any UART control command disables the startup script. Send `SCRIPT ON` to re-enable it. If the firmware was built with `OGXB_ENABLE_IDLE_SCRIPT=0`, the controller boots neutral and `SCRIPT ON` returns an error.
 
 ## Send Commands
 
